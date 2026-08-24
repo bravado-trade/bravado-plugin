@@ -1,0 +1,22 @@
+{
+  "name": "bravado",
+  "displayName": "Bravado Prediction Market Data",
+  "version": "0.1.0",
+  "description": "Build with and reason about prediction market data: wallet PnL, leaderboards, positions and tax reports from the Bravado Data API.",
+  "author": {
+    "name": "Bravado",
+    "url": "https://bravadotrade.com"
+  },
+  "homepage": "https://docs.bravado.io",
+  "repository": "https://github.com/bravado-trade/bravado-plugin",
+  "license": "MIT",
+  "keywords": [
+    "prediction-markets",
+    "trading",
+    "analytics",
+    "pnl",
+    "leaderboard",
+    "tax",
+    "api"
+  ]
+}
