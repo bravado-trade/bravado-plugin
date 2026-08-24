@@ -1,116 +1,135 @@
 ---
 name: prediction-market-pnl
-description: Read prediction market PnL, win rate and position numbers correctly before presenting them. Use whenever interpreting or explaining trader performance from Polymarket or predict.fun data — PnL, win rate, ROI, open positions, realized vs unrealized — and whenever a number does not match what another dashboard shows. Explains the cashflow model, the outcome-level cost basis, mark staleness, and how to reconcile a disagreement.
+description: Read Bravado prediction market numbers correctly before presenting them — PnL, win rate, unrealized, positions, win counts. Use whenever interpreting or explaining trader performance from Polymarket or predict.fun data, and whenever a figure disagrees with another dashboard. The dominant hazard is that several fields return a literal 0 when the value was simply not computed; this skill says which ones and how to tell.
 ---
 
-# Reading prediction market PnL without getting it wrong
+# Reading Bravado analytics without getting it wrong
 
-Prediction market accounting is not stock accounting. Positions resolve to
-exactly 0 or 1, shares are minted and burned rather than only traded, and a
-wallet can end a market with value it never sold. Numbers that look familiar
-mean something different here.
+Prediction market accounting is not stock accounting, and this API has a
+specific trap: **several fields return `0` when the value was not computed**,
+not when it is genuinely zero. A consumer that trusts those zeros produces a
+confidently wrong answer rather than an error.
 
-Get this right before quoting any figure to a user.
+Learn the zero traps first. Everything else is ordinary care.
 
-## The model: cashflow, not mark-to-market
+## The zero traps
 
-```
-pnl    = sell_usdc - buy_usdc
-volume = buy_usdc  + sell_usdc
-```
+### Windowed leaderboard rows have no win/loss data
 
-Everything downstream follows from those two lines.
+`wins`, `losses`, `total_positions` come from all-time rollups. On any
+**windowed** leaderboard request (`window=24h`, `30d`, …) they are **`0`**, and
+`win_rate` is derived as `wins/(wins+losses)`, so it reads `0` too.
 
-**What this means in practice:**
+A 30d leaderboard row showing `win_rate: 0` and `total_positions: 0` alongside
+a large positive PnL is not a trader who lost every market. It is a field that
+only exists for `window=all`.
 
-- **Open positions contribute nothing.** A wallet that bought $50k of a
-  position now worth $200k shows PnL of **-$50k** until it sells or redeems.
-  The trade is going well and the number is deeply negative.
-- **A resolved-but-unredeemed win also shows negative** until the redemption
-  lands, because redemption is what produces the inflow.
-- **PnL is path-dependent in a good way**: it is real money that moved, not an
-  estimate. It cannot be inflated by marking an illiquid position to a
-  thin quote.
+**Rule:** never quote win rate from a windowed leaderboard. Use `window=all`,
+or pull `traders/{address}` for that wallet.
 
-So "negative PnL" is not "losing". It is "has spent more than it has taken
-back so far". Say it that way when the wallet has meaningful open exposure.
+### `unrealized_pnl` on the leaderboard is `0` unless live stats are on
 
-**Always check open exposure before calling a PnL number good or bad.** Pull
-`positions/active` alongside `traders/{address}` and say which part of the
-picture is still unsettled.
+`unrealized_pnl`, `active_positions` and `open_position_value` on leaderboard
+rows are `0` unless the request enables live stats (and the server has that
+feature on). They are not "this trader has no open positions".
 
-## Win rate: outcome-level closed-position cost basis
+`traders/{address}` computes them properly from the FIFO lot state joined to
+current marks.
 
-Wins, losses and win rate are computed per **outcome**, over **closed**
-positions, on a cost-basis model. It is close to FIFO for fully closed
-outcomes but is not a full chronological lot replay.
+### Missing marks
+
+Unrealized value needs a current mark (`argMax(price_mid, ts)`). Where a mark
+is absent the contribution is treated as zero. An illiquid position that has
+not traded recently therefore quietly contributes nothing to unrealized.
+
+**In all three cases: say "not computed", never "zero".**
+
+## What PnL actually is
+
+There is a real **share-level FIFO lot engine** (`pm_fifo_lot_state`), not a
+naive cashflow difference.
+
+- **`realized_pnl`** comes from the fills ledger and **includes synthetic
+  resolution closes** — settlement at market resolution counts, so a position
+  that resolved and paid out is realized whether or not the wallet did anything.
+- **`unrealized_pnl`** = for each open lot, `shares × mark − cost`.
+- **`overall_pnl`** = realized + unrealized.
+
+So an open winning position **does** show up, in `unrealized_pnl`, on
+`traders/{address}`. It does **not** show up on a leaderboard row (see above),
+which is why the same wallet can look very different in the two places. That
+difference is the API working as designed, not a bug.
+
+The leaderboard response envelope carries `mode: "pnl_v1_cashflow"` — that tag
+is telling you which of the two views you are holding. Check it.
+
+## Win rate is market-level
+
+`wins` / `losses` / `total_positions` are `markets_won` / `markets_lost` /
+`markets_traded`. A win is a **market** the wallet came out of positive, not an
+individual trade. On the per-category endpoint the unit is a **token**: a win is
+a token whose realized PnL is positive.
 
 Consequences:
 
-- A partially closed outcome is not counted as a win or a loss yet.
-- Win rate says nothing about size. 9 wins of $10 and 1 loss of $10k is a 90%
-  win rate and a disaster. **Never present win rate without PnL next to it.**
-- Small denominators are common. 4 closed outcomes gives a win rate that is
-  noise. Below roughly 20 closed positions, say the sample is thin rather
-  than quoting a percentage as if it were a skill estimate.
+- Win rate says nothing about size. 9 wins of $10 against 1 loss of $10k is a
+  90% win rate and a disaster. **Never present win rate without PnL beside it.**
+- Small denominators are common. Under ~20 decided markets, report the count,
+  not the percentage.
+- `win_rate` is a fraction 0–1, not a percentage. `0.61` is 61%.
 
-## Mark-to-market fields go stale, then disappear
+## Units — every one of these has bitten someone
 
-Where a mark-to-market figure is provided, it uses the latest observed token
-price **only while that price is fresher than `MARK_PRICE_MAX_AGE_DAYS`**
-(30 days by default). Past that the field is omitted.
+- **Amounts are micro-USDC.** Divide by `1e6` for dollars.
+- **Shares are micro.** 1 share = `1000000`.
+- **Prices and marks are probabilities in [0,1].** Multiply by 100 for cents.
+  `price_per_share` is signed, so take the absolute value first.
+- **Numeric fields arrive as JSON strings** to preserve precision. Parse as
+  decimal, not float.
+- `active_positions` **excludes dust** — positions under 1 whole share are not
+  counted.
 
-**A missing mark means unknown, not zero.** An illiquid market that has not
-traded in six weeks has no defensible mark; substituting zero silently
-converts "we don't know" into "it's worthless", which is a specific wrong
-answer rather than an absence of one.
+## Bots and excluded wallets
 
-If a mark is missing, say the position cannot be valued right now and give the
-cost basis instead.
+- `is_mm_bot` comes from a market-maker flag table. It is real signal: a
+  flagged wallet is likely running market making, whose record does not
+  transfer to a follower.
+- Leaderboards exclude ~31 operator, relayer, exchange and collateral
+  **contracts**, identified by bytecode size. This is a contract denylist, **not
+  a bot filter** — ordinary bot wallets are still ranked. Do not describe
+  leaderboards as bot-free.
+- On predict.fun, `is_mm_bot` is always `false` because the flag table is
+  empty there. That is absence of data, not absence of bots.
 
-## net vs gross
+## Venue differences that change the answer
 
-`traders/{address}` accepts `basis=net` (default) or `basis=gross`. They
-answer different questions. Never compare a `net` figure from one call with a
-`gross` figure from another, and always state which basis a quoted number used.
-
-## Activity types are not all trades
-
-Wallet activity rows carry a `type`: `TRADE`, `REDEEM`, `REWARD`,
-`MAKER_REBATE`, `REFERRAL_REWARD`, `SPLIT`, `MERGE`, `CONVERSION`, `DEPOSIT`,
-`WITHDRAW`.
-
-Reconstructing a balance from `type=TRADE` alone drops redemptions, rewards,
-splits and merges, and the result will not tie out. If the question is "where
-did the money go", you need all types.
-
-Splits and merges in particular move value without being trades: a split turns
-collateral into a full set of outcome tokens, a merge does the reverse. A
-wallet doing a lot of both is likely running a market-making or arbitrage
-strategy, not directional betting — which changes how every other number
-should be read.
+- **Identity enrichment (username, avatar) is Polymarket-only.** A predict.fun
+  wallet with no username is not anonymous by choice; the enrichment sources
+  do not cover that venue.
+- **Fee handling differs.** On the predict.fun venue the engine's
+  `realized_pnl` is already fee-net, so `basis=net` is a no-op and subtracting
+  fees again double-counts. Treat the `fees` field there as informational.
 
 ## When our number disagrees with another dashboard
 
-This comes up constantly and is usually not a bug. Work through it in order:
+Work through this in order before calling anything a bug:
 
-1. **Different model.** Most venue interfaces show an estimated mark-to-market
-   portfolio value. Ours shows realized cashflow. On a wallet with large open
-   positions these will differ enormously and both are correct.
-2. **Different basis.** `net` vs `gross`.
-3. **Different window.** A 30d figure against an all-time figure.
-4. **Different wallet.** Many traders hold a proxy or Safe wallet distinct
-   from their signing EOA. Confirm which address is actually being measured.
-5. **Timing.** Cashflow updates on settlement, not on price movement.
+1. **Leaderboard vs wallet summary.** Leaderboard rows omit unrealized. The
+   summary includes it. This alone explains most large gaps.
+2. **Windowed vs all-time.** Win/loss fields only exist all-time.
+3. **Different model.** Most venue interfaces show estimated mark-to-market
+   portfolio value; `realized_pnl` is settled money.
+4. **Different wallet.** Many traders hold a proxy or Safe wallet distinct from
+   their signing EOA. Confirm which address is being measured.
+5. **Timing.** Realized updates on settlement, not on price movement.
 
-Only after those five is a discrepancy worth escalating. When it is, cite the
-endpoint, the window and the basis you used, so the disagreement is about data
-and not about definitions.
+When you do escalate, cite the endpoint, the window and the `mode` in the
+envelope, so the disagreement is about data rather than definitions.
 
 ## Presenting a number
 
-- state the model in a clause, not a footnote: "realized cashflow PnL"
-- state the window and the basis
-- pair win rate with PnL and with the number of closed positions
-- flag open exposure explicitly when it is material
-- say "unknown" when a mark is missing
+- name the field you used and the window
+- pair win rate with PnL and with the decided-market count
+- state realized and unrealized separately when both exist
+- say "not computed" for the zero traps above, never "zero"
+- give dollars, not micro-USDC

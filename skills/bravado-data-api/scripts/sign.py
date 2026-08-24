@@ -70,7 +70,7 @@ def sign_headers(
 
 
 class Bravado:
-    def __init__(self, public_key: str, secret: str, host: str = "https://api.bravado.io"):
+    def __init__(self, public_key: str, secret: str, host: str = "https://partner-api.bravadotrade.com"):
         self.public_key = public_key
         self.secret = secret
         self.host = host

@@ -79,7 +79,7 @@ export function bravado(config: {
   secret: string;
   host?: string;
 }) {
-  const host = config.host ?? "https://api.bravado.io";
+  const host = config.host ?? "https://partner-api.bravadotrade.com";
 
   return {
     async get<T = unknown>(

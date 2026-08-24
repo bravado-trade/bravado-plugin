@@ -9,8 +9,10 @@ A leaderboard rank is an outcome, not evidence. This skill is the method for
 deciding whether a prediction market trader's record reflects skill, size,
 luck, or a strategy that does not transfer.
 
-Read `prediction-market-pnl` first if you have not — every judgment here rests
-on knowing that PnL is realized cashflow, not portfolio value.
+Read `prediction-market-pnl` first if you have not. Every judgment here rests
+on knowing which view you are holding and which fields are real zeros — a
+windowed leaderboard reports `win_rate: 0` for every trader on it, and reading
+that as a record rather than as an absent field invalidates the whole analysis.
 
 ## Reading order
 
@@ -45,9 +47,14 @@ who is solidly profitable with a single outlier on top.
 
 ### Thin sample
 
-Win rate over 4 closed outcomes is noise. Under ~20 closed positions, report
-the count instead of the percentage. A trader with 6 months and 12 closed
-positions has not demonstrated much regardless of the numbers.
+Wins and losses are counted per **market**, not per trade. Win rate over 4
+decided markets is noise. Under ~20, report the count instead of the
+percentage. A trader with 6 months and 12 decided markets has not demonstrated
+much regardless of the numbers.
+
+Check where the number came from first: on a windowed leaderboard the win/loss
+fields are all-time rollups that are simply not populated, so they read `0`.
+Pull `traders/{address}` for a real figure.
 
 ### Survivorship and selection
 
@@ -72,11 +79,18 @@ and volume together, never separately.
 
 ### Strategy that does not transfer
 
-Heavy `SPLIT` / `MERGE` / `CONVERSION` activity, or large maker rebates,
-suggests market making or arbitrage rather than directional betting. Those
-records are often genuinely skilled and still useless to copy, because the
-edge is in infrastructure and speed rather than in opinion. Say which kind of
-trader this is before saying whether to follow them.
+Check `is_mm_bot` first — it flags likely market makers directly. Note it is
+**always false on predict.fun** because the flag table is empty there, so
+absence of the flag on that venue means nothing.
+
+Failing the flag, heavy `SPLIT` / `MERGE` / `CONVERSION` activity or large
+maker rebates suggests market making or arbitrage rather than directional
+betting. Those records are often genuinely skilled and still useless to copy,
+because the edge is in infrastructure and speed rather than in opinion. Say
+which kind of trader this is before saying whether to follow them.
+
+Do not describe the leaderboard as bot-free. It excludes ~31 operator and
+exchange **contracts** by bytecode size; ordinary bot wallets are still ranked.
 
 ### Unsettled exposure
 
@@ -109,7 +123,7 @@ Rules:
 
 That is a legitimate and common result. Say it when:
 
-- the wallet has under ~20 closed positions
+- the wallet has under ~20 decided markets
 - most exposure is still open
 - the history is shorter than one full market cycle for its categories
 - marks are missing on the positions that would decide it

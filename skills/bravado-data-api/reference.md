@@ -1,6 +1,6 @@
 # Bravado Data API — endpoint reference
 
-Host `https://api.bravado.io`. Every path below is prefixed with
+Host `https://partner-api.bravadotrade.com`. Every path below is prefixed with
 `/trader-analytics`. `{address}` is a Polygon wallet address, matched
 case-insensitively. Windows: `1h`, `4h`, `24h`, `7d`, `30d`, `90d`, `365d`, `all`.
 
@@ -69,11 +69,26 @@ no cursor. Deep offsets get slower; prefer narrowing the window over paging far.
 
 ## Model caveats that belong in your code, not your head
 
-- `pnl = sell_usdc - buy_usdc`, `volume = buy_usdc + sell_usdc`. Cashflow, not
-  mark-to-market.
-- Wins, losses and win rate use an **outcome-level closed-position cost basis**.
-  Close to FIFO for fully closed outcomes; not a chronological lot replay.
-- Mark-to-market fields only appear while the observed price is fresher than
-  `MARK_PRICE_MAX_AGE_DAYS` (30 default). Absent means unknown, not zero.
-- `basis=net` (default) and `basis=gross` are different questions. Do not
-  compare a `net` number from one call against a `gross` number from another.
+- There is a real **share-level FIFO lot engine**. `realized_pnl` comes from the
+  fills ledger and **includes synthetic resolution closes**, so settlement at
+  market resolution counts. `unrealized_pnl` is `shares x mark - cost` over open
+  lots. `overall_pnl` is the sum.
+- **Leaderboard rows are not the same view as the wallet summary.** The
+  leaderboard envelope carries `mode: "pnl_v1_cashflow"` and omits unrealized;
+  `traders/{address}` computes it. The same wallet legitimately differs between
+  the two.
+- **Wins and losses are market-level** (`markets_won` / `markets_lost` /
+  `markets_traded`), not per trade. On `categories` the unit is a token: a win is
+  a token with positive realized PnL. `win_rate` is a fraction 0-1.
+- **Windowed leaderboards return 0 for `wins`, `losses`, `total_positions` and
+  therefore `win_rate`** — those are all-time rollups only. Not real zeros.
+- **`unrealized_pnl`, `active_positions`, `open_position_value` are 0 on
+  leaderboard rows unless live stats are enabled.** Not real zeros.
+- `active_positions` **excludes dust** — under 1 whole share is not counted.
+- **Amounts are micro-USDC, shares are micro, prices are probabilities in
+  [0,1].** Divide by 1e6, divide by 1e6, multiply by 100.
+- `is_mm_bot` flags likely market makers, and is **always false on predict.fun**
+  because the flag table is empty there. Leaderboards exclude ~31 operator and
+  exchange **contracts** by bytecode size — that is a contract denylist, not a
+  bot filter.
+- **Identity enrichment (username, avatar) is Polymarket-only.**

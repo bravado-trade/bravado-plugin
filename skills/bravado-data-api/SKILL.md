@@ -1,11 +1,11 @@
 ---
 name: bravado-data-api
-description: Write correct code against the Bravado Data API (prediction market analytics — wallet PnL, leaderboards, positions, trade history, tax reports for Polymarket and predict.fun). Use when the user is building, scripting, or debugging anything that reads prediction market trader data, when they mention the Bravado API, or when they need HMAC request signing for api.bravado.io. Covers auth, endpoints, field semantics and the mistakes that cost the most time.
+description: Write correct code against the Bravado Data API (prediction market analytics — wallet PnL, leaderboards, positions, trade history, tax reports for Polymarket and predict.fun). Use when the user is building, scripting, or debugging anything that reads prediction market trader data, when they mention the Bravado API or partner-api.bravadotrade.com, or when they need HMAC request signing for it. Covers auth, endpoints, units and the mistakes that cost the most time.
 ---
 
 # Building with the Bravado Data API
 
-Base URL: `https://api.bravado.io`
+Base URL: `https://partner-api.bravadotrade.com`
 
 The Data API serves trader analytics computed from a full index of prediction
 market activity: per-wallet PnL, leaderboards, positions, trade history,
@@ -42,7 +42,8 @@ The payload is four lines joined by `\n`:
 payload = timestamp + "\n" + METHOD + "\n" + canonical_path + "\n" + sha256_hex(rawBody)
 ```
 
-For GET (no body) the last line is always the empty-string SHA-256 constant:
+This surface is **GET-only**, so the last line is always the empty-string
+SHA-256 constant:
 
 ```
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -81,14 +82,18 @@ copying one of those over re-deriving the rules.
 
 - **Milliseconds, not seconds.** Seconds parse fine and then fail the window
   check as ~55 years stale.
-- **5 minute clock tolerance** (`|now - ts| <= 300000`). A container with a
-  drifted clock produces `401 STALE_TIMESTAMP`, which reads like a bad key.
-- **Sign the exact bytes you send.** If there is a body, serialize once, hash
-  that buffer, and send that same buffer. Any middleware that re-serializes
-  JSON in transit breaks the signature.
+- **Tight clock tolerance.** The published analytics spec states **±30s** of
+  server time (the Trade API default is looser, 5 min — do not assume the loose
+  one here). A drifted container clock produces `401 STALE_TIMESTAMP`, which
+  reads like a bad key. Sync the clock before debugging the signature.
+- **The key needs scope `analytics.read`** and the partner account needs the
+  request's venue enabled — `polymarket` for the main routes, `predictfun` for
+  `/predict/*`. Otherwise `403 VENUE_NOT_ENABLED`.
 - **50 auth failures in 60s from one IP returns `429 RATE_LIMITED`** before the
   key is even looked up. While debugging a signature, back off between attempts
   or you will start debugging the wrong error.
+- A legacy `Authorization: Bearer <token>` still works during the key-migration
+  window and is deprecated. New integrations use partner keys.
 
 ## Endpoints
 
@@ -109,21 +114,35 @@ file. The ones that carry most of the value:
 `{address}` is a Polygon wallet address, matched case-insensitively.
 Time windows are `1h`, `4h`, `24h`, `7d`, `30d`, `90d`, `365d`, `all`.
 
-## Field semantics that change your code
+## Units and encodings — check these before anything else
 
-- **Numbers arrive as JSON strings** (PnL, volume, balances, shares, prices) to
-  preserve precision. Parse them as decimals. `parseFloat` on a position size
-  and then summing is how reconciliation reports end up off by cents.
+Every one of these has produced a wrong number in production:
+
+- **Amounts are micro-USDC.** Divide by `1e6` to get dollars.
+- **Shares are micro.** 1 share = `1000000`.
+- **Prices and marks are probabilities in `[0,1]`.** Multiply by 100 for cents.
+  `price_per_share` is signed — take the absolute value first.
+- **Numbers arrive as JSON strings** to preserve precision. Parse as decimal.
+  `parseFloat` and then summing is how a reconciliation ends up off by cents.
 - **`*_at` fields are RFC3339 strings; `*_ts` fields are unix seconds.** Both
   appear in the same response.
-- **PnL is a cashflow model**, not mark-to-market: `pnl = sell_usdc - buy_usdc`.
-  Open positions therefore do not contribute unrealized gains. This is the
-  single most common misreading — see the `prediction-market-pnl` skill before
-  presenting any PnL number to a user.
-- **Mark-to-market fields go stale silently.** They use the latest observed
-  token price only while it is fresher than `MARK_PRICE_MAX_AGE_DAYS`
-  (30 by default). Past that they are omitted, not zeroed. Treat missing as
-  unknown, never as zero.
+- **Addresses are case-insensitive** and the `0x` prefix is optional — bare
+  40-hex, as returned in leaderboard rows, is accepted on input.
+
+## Several fields return 0 when they were not computed
+
+This is the highest-cost trap in the API and it does not surface as an error:
+
+- On a **windowed** leaderboard (`window=30d` etc), `wins`, `losses`,
+  `total_positions` are `0` and therefore `win_rate` is `0`. Those fields only
+  exist for `window=all`.
+- `unrealized_pnl`, `active_positions` and `open_position_value` on leaderboard
+  rows are `0` unless live stats are enabled.
+
+Neither means the trader has no wins and no open positions. Code that treats
+them as real zeros produces a plausible wrong answer. Branch on the request
+shape and render "not computed" instead. The `prediction-market-pnl` skill
+covers how to present this.
 
 ## Errors
 
@@ -140,11 +159,27 @@ these distinctly, because retrying the wrong one wastes the rate budget:
 | `429 RATE_LIMITED` | per-key bucket or brute-force guard | yes, with backoff |
 | `5xx` | upstream | yes, with backoff and a cap |
 
+**Error bodies are not always JSON.** The hosting edge replaces the body of
+`5xx` responses with an HTML page, so a client that assumes `res.json()` on a
+failure path throws a parse error instead of surfacing the real status. Always
+branch on the status code before parsing, and keep the raw text for the log.
+The original status survives in the `x-do-orig-status` header when the edge has
+rewritten it.
+
+**A wallet with no indexed activity currently returns `504` + HTML** on the
+open tax endpoints rather than an empty result — verified 2026-08-24 against
+`/traders/{address}/tax-report`. Treat `504` on a lookup as "address unknown or
+not indexed", not as an outage, and do not retry it in a tight loop.
+
 ## Rate limits and cost
 
 Keyed traffic draws from a per-key token bucket dedicated to analytics — it is
 **not** shared with trading endpoints, so hammering reads cannot starve order
 placement. Usage is metered per hour and per route class.
+
+Every response carries `X-RateLimit-Limit`, `X-RateLimit-Remaining` and
+`X-RateLimit-Reset`; a `429` carries `Retry-After`. Read those rather than
+guessing a backoff.
 
 Practical consequences when writing a client:
 
@@ -160,6 +195,8 @@ Practical consequences when writing a client:
 - [ ] canonical querystring sorted and RFC-3986 encoded (space as `%20`)
 - [ ] empty-body SHA-256 constant used for GET
 - [ ] numeric strings parsed as decimals, not floats
-- [ ] missing mark-to-market treated as unknown, not zero
+- [ ] micro-USDC divided by 1e6; shares divided by 1e6; prices ×100 for cents
+- [ ] windowed-leaderboard `win_rate` / `unrealized_pnl` rendered as
+      "not computed", not as zero
 - [ ] `429` backs off; `401` does not retry
 - [ ] leaderboard cached, per-wallet calls not looped
