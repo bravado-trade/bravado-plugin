@@ -2,14 +2,21 @@
 description: Prediction market tax report for a wallet and year
 ---
 
-Pull the tax report for wallet and year: `$ARGUMENTS`.
+Produce the tax report for: `$ARGUMENTS`.
 
-Use the open tax endpoints (`tax-report`, `tax-report/8949`) — they need no
-API key. If the year is missing, ask for it rather than guessing.
+Follow the `prediction-market-tax` skill.
 
-Summarize total proceeds, cost basis and net gain or loss, then offer the
-Form-8949-style disposition detail.
+Before computing anything, ask whether that is the complete list of addresses
+the user traded from — a separate signing EOA, a proxy or Safe wallet, an old
+account. A missing wallet misstates the year, and this is the most common way
+one of these comes out wrong. If several wallets belong to one owner, use the
+entity rollup rather than adding separate reports together.
 
-State plainly that this is generated from on-chain activity for the given
-address and is not tax advice, and that the user should confirm the address
-list is complete — a trader with multiple wallets needs each one.
+If the year is missing, ask. Do not assume the current one.
+
+Then: pull the per-year report, check reconciliation before quoting any total,
+keep short and long term separate, and offer the Form-8949 detail — as CSV if it
+is going to an accountant.
+
+Close by stating that this is generated from on-chain activity for the addresses
+given and is not tax advice.

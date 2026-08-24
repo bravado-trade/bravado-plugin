@@ -1,17 +1,15 @@
 ---
-description: Full due-diligence report on a prediction market wallet
+description: Full due-diligence dossier on a prediction market wallet
 ---
 
 Produce a due-diligence report on the wallet `$ARGUMENTS`.
 
-Follow the `trader-due-diligence` skill: read categories, active positions,
-the PnL curve and the largest fills before concluding anything from the
-headline summary. Compute the concentration ratio explicitly and lead with it
-if it is above 0.5.
+Delegate this to the `trader-analyst` agent — the gathering is five calls of raw
+rows and none of them belong in this conversation. You want its verdict back,
+not its working.
 
-Apply `prediction-market-pnl` when quoting any figure: state the model, the
-window and the basis, pair win rate with the closed-position count, and flag
-open exposure.
+If no address was given, ask for one rather than guessing.
 
-End with a verdict that names the fact that would change it. If there is not
-enough settled activity to judge, say that instead.
+When the dossier comes back, present it as written. Do not soften the verdict,
+do not add an encouraging summary line, and do not turn "cannot tell" into a
+qualified recommendation. Someone is deciding where to put money.

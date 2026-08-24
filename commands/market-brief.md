@@ -1,16 +1,15 @@
 ---
-description: Brief on a prediction market — price action, holders, flow
+description: Positioning brief on a prediction market — who is in it and are they any good
 ---
 
 Brief me on the prediction market `$ARGUMENTS`.
 
-Cover: current price and how it moved over the last week, the concentration of
-top holders, and whether recent flow is coming from wallets with a track record
-or from new addresses.
+Delegate to the `market-scout` agent. It needs both identifiers — the condition
+id for holders and volume, the token id for price — so if you only have one,
+find the other from a recent trade row before dispatching.
 
-Treat holder concentration the same way `trader-due-diligence` treats PnL
-concentration — a market held by a handful of addresses moves differently from
-a broadly held one, and that belongs in the brief.
+If you were given a market name or slug rather than an id, resolve it first and
+confirm which market you resolved to.
 
-Do not predict the outcome. Describe what the positioning shows and what would
-have to be true for the current price to be wrong.
+The brief must not contain a forecast. If it comes back with one, strip it and
+say what the positioning shows instead.
