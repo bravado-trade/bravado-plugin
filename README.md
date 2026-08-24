@@ -48,28 +48,28 @@ implementations produce byte-identical signatures.
 ## Privacy Policy
 
 This plugin ships documentation and skills only. It does not collect, store or
-transmit any data on its own.
+transmit any data.
 
-**What it collects:** nothing. There is no telemetry, no analytics and no
-network call made by the plugin itself.
+**What it collects:** nothing. There is no telemetry, no analytics, and the
+plugin itself makes no network request.
 
-**Credentials:** if you supply Bravado API credentials to use the Data API,
+**Credentials:** if you supply Bravado API credentials to reach the Data API,
 they are held by your Claude client and used only to sign requests to
-`api.bravado.io`. This repository contains no credential storage and no
-credential is ever written to disk by the plugin.
+`partner-api.bravadotrade.com`. This repository contains no credential storage,
+and no credential is written to disk by the plugin.
 
 **Third-party requests:** when a skill leads Claude to call the Bravado Data
-API, that request goes to `api.bravado.io` and is subject to
-[Bravado's privacy policy](https://bravadotrade.com/privacy). Requests are
-logged by Bravado for rate limiting, usage metering and abuse prevention, and
-are associated with the API key that made them. Wallet addresses you query are
-public blockchain data.
+API, that request goes to `partner-api.bravadotrade.com`. Bravado logs those
+requests for rate limiting, usage metering and abuse prevention, associated
+with the API key that made them. Wallet addresses you query are public
+blockchain data. The open tax endpoints require no credential and are not
+associated with an account.
 
-**Retention and sharing:** the plugin retains nothing and shares nothing. Data
-retention for the Bravado Data API is described in Bravado's privacy policy.
+**Retention and sharing:** the plugin retains nothing and shares nothing with
+anyone.
 
 **Contact:** support@bravadotrade.com
 
-## License
+## License## License
 
 MIT — see [LICENSE](./LICENSE).
