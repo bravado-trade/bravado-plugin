@@ -22,7 +22,10 @@ case-insensitively. Windows: `1h`, `4h`, `24h`, `7d`, `30d`, `90d`, `365d`, `all
 | `GET /traders/{address}/pnl` | Cumulative PnL series. |
 | `GET /traders/{address}/categories` | PnL and volume by category. |
 | `GET /traders/{address}/usdc-balance` | Current Polygon collateral balance. |
-| `GET /traders/{address}/combo-markets` | Per-market Combos (Positions Framework) PnL. |
+
+> **Not on this surface:** `combo-markets` exists in the analytics service but
+> the api does not proxy it, so `/trader-analytics/traders/{address}/combo-markets`
+> is a 404. Verified 2026-08-30.
 
 ## Positions and fills
 

@@ -36,9 +36,19 @@ Three market endpoints take a parameter literally named `market`, and they do
 A condition id identifies the market. A token id identifies **one outcome** of
 it — Yes and No are different token ids under the same condition id.
 
-Passing the wrong one does not error usefully; it returns empty or nothing that
-looks wrong. Both appear on a trade row as `conditionId` and `asset`, so grab
-both when you have one.
+Passing the wrong one fails in two different ways, and neither is obvious
+(verified against production 2026-08-30):
+
+- a **well-formed id for the wrong thing** returns an empty success —
+  `prices-history` given a condition id answers `200 {"history":[]}`, and
+  `holders` given an unknown condition id answers `200 []`
+- a **wrong-shaped id** fails upstream and, because the hosting edge rewrites
+  `5xx` bodies, arrives as an HTML page rather than JSON — `holders` given a
+  token id answers `504` with `text/html` (origin `502`)
+
+So an empty result and a parse error can both mean "you passed the wrong
+identifier". Both ids appear on a trade row as `conditionId` and `asset`, so
+grab both when you have either.
 
 `prices-history` also requires `startTs` (unix **seconds**) and `fidelity`
 (minutes per bucket). It is per-outcome, so a two-outcome market needs two calls
