@@ -17,6 +17,7 @@ case-insensitively. Windows: `1h`, `4h`, `24h`, `7d`, `30d`, `90d`, `365d`, `all
 
 | endpoint | notes |
 |---|---|
+| `GET /traders/batch` | **Screen up to 50 wallets in one call.** `addresses=a,b,c`. Realized PnL, volume, decided markets, win rate, MM flag. |
 | `GET /traders/{address}` | Performance summary. `basis=net` (default) or `gross`. |
 | `GET /traders/{address}/pnl` | Cumulative PnL series. |
 | `GET /traders/{address}/categories` | PnL and volume by category. |

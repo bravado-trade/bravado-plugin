@@ -56,7 +56,10 @@ if you want both sides.
    position, and how many holders make up the top half. A market held by five
    addresses moves on five decisions.
 4. **Who the holders are.** This is the step that matters and the one most
-   analyses skip. For the significant holders, pull their trader summary.
+   analyses skip. Screen the significant holders in **one** call rather than
+   looping over them — the screening view returns realized PnL, decided markets,
+   win rate and the market-maker flag for up to 50 addresses at once. Pull the
+   full summary only for the few that survive.
 5. **Recent flow.** New addresses entering versus known wallets adding.
 
 ## Judging the participants

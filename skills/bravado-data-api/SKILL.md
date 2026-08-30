@@ -185,8 +185,13 @@ Practical consequences when writing a client:
 
 - Cache leaderboard responses. They are identical for every caller and change
   slowly; re-fetching per user request is pure waste.
-- Per-wallet endpoints are unique per query and are the expensive ones. Batch
-  by address where an endpoint supports it rather than looping.
+- **Never loop a per-wallet endpoint over a list.** `GET /traders/batch` takes up
+  to 50 addresses and answers in one request. Twenty addresses looped is twenty
+  round trips, twenty reads and twenty chances to be throttled; batched it is
+  one. This is the single biggest efficiency difference between a naive client
+  and a good one.
+- Per-wallet endpoints are unique per query and are the expensive ones, so the
+  batch form is where the saving actually is.
 - Backoff on `429` rather than retrying immediately.
 
 ## Checklist before shipping a client
@@ -199,4 +204,4 @@ Practical consequences when writing a client:
 - [ ] windowed-leaderboard `win_rate` / `unrealized_pnl` rendered as
       "not computed", not as zero
 - [ ] `429` backs off; `401` does not retry
-- [ ] leaderboard cached, per-wallet calls not looped
+- [ ] leaderboard cached, and `traders/batch` used instead of looping per-wallet calls

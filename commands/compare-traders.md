@@ -4,8 +4,14 @@ description: Compare prediction market wallets on the same basis
 
 Compare these wallets: `$ARGUMENTS`.
 
-Dispatch one `trader-analyst` agent per address, concurrently. They are
-independent and running them in sequence wastes the user's time for nothing.
+Screen all of them in one call first. Comparing is exactly what the screening
+view is for: it returns realized PnL, decided markets, win rate and the
+market-maker flag for every address at once, on one consistent basis.
+
+Then dispatch a `trader-analyst` agent only for the addresses where the screen
+leaves a real question — concurrently, since they are independent. Running a
+full dossier on a wallet the screen already settled is spending the user's
+credits to reach the same answer.
 
 Then compare on a **single consistent basis**. This is where comparisons go
 wrong:

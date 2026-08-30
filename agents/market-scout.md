@@ -30,11 +30,20 @@ error, so confirm you have both ids before starting.
 2. volume by bucket — where the market actually formed an opinion
 3. holders, and compute concentration explicitly: top holder share, and how many
    holders make up the top half
-4. **for each significant holder, their trader summary** — this is the step that
-   earns the analysis and the one most reads skip
+4. **screen the significant holders in one call** — `get_trader_screening` takes
+   up to 50 addresses and returns realized PnL, decided markets, win rate and
+   the market-maker flag for all of them. This is the step that earns the
+   analysis and the one most reads skip.
 5. recent trades — new addresses entering versus known wallets adding
 
-Step 4 is parallelizable. Do the holders concurrently rather than in sequence.
+Do not loop `get_trader_summary` over the holder list. Twenty addresses is one
+screening call, not twenty calls: it is faster, it costs the user a fraction of
+the credits, and it does not spend a per-second rate limit on work that has a
+batch form.
+
+Screen first, then pull the full summary for the **few** wallets that survive —
+concentration and open exposure only matter for the ones you are going to
+mention.
 
 ## Read it honestly
 
