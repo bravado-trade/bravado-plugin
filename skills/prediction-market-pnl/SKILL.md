@@ -83,6 +83,10 @@ a token whose realized PnL is positive.
 
 Consequences:
 
+- **The unit changes with the tool.** `get_trader_profile` counts markets;
+  `get_trader_categories` counts outcomes, and one market can carry several. The
+  same wallet reads 336 and 354. Neither output says which it is, so a count
+  from one tool and a rate from the other do not belong in the same sentence.
 - Win rate says nothing about size. 9 wins of $10 against 1 loss of $10k is a
   90% win rate and a disaster. **Never present win rate without PnL beside it.**
 - Small denominators are common. Under ~20 decided markets, report the count,

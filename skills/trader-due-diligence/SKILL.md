@@ -52,10 +52,18 @@ decided markets is noise. Under ~20, report the count instead of the
 percentage. A trader with 6 months and 12 decided markets has not demonstrated
 much regardless of the numbers.
 
-Check which tool the number came from. `get_trader_categories` and
-`get_trader_profile` do not agree — measured on two wallets, categories reports
-gross and the profile reports net, and their win and loss counts differ too.
-Say which one you used.
+Check which tool the number came from, because two tools count two different
+things and neither says so in its output.
+
+`get_trader_profile` counts **markets**. `get_trader_categories` counts
+**outcomes** — a market with several outcomes contributes more than one. On one
+wallet that is 336 against 354, and the gap is not an error.
+
+The PnL figures also differ, for an unrelated reason: categories reports gross
+and the profile reports net, differing by the fee total exactly.
+
+Two different causes, one symptom. Say which tool a number came from, and never
+put a count from one beside a rate from the other.
 
 ### Survivorship and selection
 
