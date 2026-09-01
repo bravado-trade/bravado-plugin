@@ -46,7 +46,7 @@ concentration could not be computed rather than proceeding as if it were fine.
 - **Numbers** — PnL with model and window named, decided markets, concentration,
   open exposure
 - **What would change it** — the specific thing you would need to know
-- **What you could not check** — endpoints that failed or fields not computed
+- **What you could not check** — tools that failed, or figures whose span you could not reconcile
 
 If there is not enough settled activity to judge, say that. "Fewer than 20
 decided markets, mostly open exposure, cannot support a verdict" is a complete

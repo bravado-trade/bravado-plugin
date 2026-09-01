@@ -9,10 +9,10 @@ A leaderboard rank is an outcome, not evidence. This skill is the method for
 deciding whether a prediction market trader's record reflects skill, size,
 luck, or a strategy that does not transfer.
 
-Read `prediction-market-pnl` first if you have not. Every judgment here rests
-on knowing which view you are holding and which fields are real zeros — a
-windowed leaderboard reports `win_rate: 0` for every trader on it, and reading
-that as a record rather than as an absent field invalidates the whole analysis.
+Read `prediction-market-pnl` first if you have not. Every judgment here rests on
+knowing which view you are holding and over what span — a windowed request
+returns windowed PnL but all-time fees, streaks and drawdown, and mixing the two
+produces a number that describes no period at all.
 
 ## Reading order
 
@@ -52,9 +52,10 @@ decided markets is noise. Under ~20, report the count instead of the
 percentage. A trader with 6 months and 12 decided markets has not demonstrated
 much regardless of the numbers.
 
-Check where the number came from first: on a windowed leaderboard the win/loss
-fields are all-time rollups that are simply not populated, so they read `0`.
-Pull `traders/{address}` for a real figure.
+Check which tool the number came from. `get_trader_categories` and
+`get_trader_profile` do not agree — measured on two wallets, categories reports
+gross and the profile reports net, and their win and loss counts differ too.
+Say which one you used.
 
 ### Survivorship and selection
 

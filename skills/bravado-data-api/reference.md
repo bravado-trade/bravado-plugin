@@ -84,10 +84,13 @@ no cursor. Deep offsets get slower; prefer narrowing the window over paging far.
 - **Wins and losses are market-level** (`markets_won` / `markets_lost` /
   `markets_traded`), not per trade. On `categories` the unit is a token: a win is
   a token with positive realized PnL. `win_rate` is a fraction 0-1.
-- **Windowed leaderboards return 0 for `wins`, `losses`, `total_positions` and
-  therefore `win_rate`** — those are all-time rollups only. Not real zeros.
-- **`unrealized_pnl`, `active_positions`, `open_position_value` are 0 on
-  leaderboard rows unless live stats are enabled.** Not real zeros.
+- **A window does not cover every field.** `wins`, `losses` and `win_rate` do
+  respect it — verified — but `total_fees`, `biggest_win` and `max_drawdown` are
+  always all-time, because they are meaningless truncated. Subtracting an
+  all-time fee total from a windowed PnL produces a number for no period at all.
+- **`unrealized_pnl` and `active_positions` of `0` are usually real.** Most large
+  realized records belong to wallets that have closed out. A non-zero
+  `open_position_value` beside `active_positions: 0` is dust, not a contradiction.
 - `active_positions` **excludes dust** — under 1 whole share is not counted.
 - **Amounts are micro-USDC, shares are micro, prices are probabilities in
   [0,1].** Divide by 1e6, divide by 1e6, multiply by 100.

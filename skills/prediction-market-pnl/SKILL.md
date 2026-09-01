@@ -1,16 +1,16 @@
 ---
 name: prediction-market-pnl
-description: Read Bravado prediction market numbers correctly before presenting them — PnL, win rate, unrealized, positions, win counts. Use whenever interpreting or explaining trader performance from Polymarket or predict.fun data, and whenever a figure disagrees with another dashboard. The dominant hazard is that several fields return a literal 0 when the value was simply not computed; this skill says which ones and how to tell.
+description: Read Bravado prediction market numbers correctly before presenting them — PnL, win rate, unrealized, positions, win counts. Use whenever interpreting or explaining trader performance from Polymarket or predict.fun data, and whenever a figure disagrees with another dashboard. The dominant hazard is that a window covers some fields and not others, so arithmetic across them describes no period at all.
 ---
 
 # Reading Bravado analytics without getting it wrong
 
 Prediction market accounting is not stock accounting, and this API has a
-specific trap: **several fields return `0` when the value was not computed**,
-not when it is genuinely zero. A consumer that trusts those zeros produces a
-confidently wrong answer rather than an error.
+specific trap: **a window covers some fields and not others.** Arithmetic across
+them produces a number that describes no period at all, and nothing in the
+response says so.
 
-Learn the zero traps first. Everything else is ordinary care.
+Learn that first. Everything else is ordinary care.
 
 ## Windows are partial, and not every field respects them
 
@@ -142,5 +142,5 @@ envelope, so the disagreement is about data rather than definitions.
 - name the field you used and the window
 - pair win rate with PnL and with the decided-market count
 - state realized and unrealized separately when both exist
-- say "not computed" for the zero traps above, never "zero"
+- name the span on both sides of any subtraction, or use `window=all`
 - give dollars, not micro-USDC

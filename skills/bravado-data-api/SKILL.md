@@ -129,20 +129,25 @@ Every one of these has produced a wrong number in production:
 - **Addresses are case-insensitive** and the `0x` prefix is optional — bare
   40-hex, as returned in leaderboard rows, is accepted on input.
 
-## Several fields return 0 when they were not computed
+## A window does not cover every field
 
-This is the highest-cost trap in the API and it does not surface as an error:
+Verified against the live surface, same wallet, two windows:
 
-- On a **windowed** leaderboard (`window=30d` etc), `wins`, `losses`,
-  `total_positions` are `0` and therefore `win_rate` is `0`. Those fields only
-  exist for `window=all`.
-- `unrealized_pnl`, `active_positions` and `open_position_value` on leaderboard
-  rows are `0` unless live stats are enabled.
+```
+7d    wins 6   losses 6   positions 12   win_rate 0.5000
+30d   wins 10  losses 6   positions 16   win_rate 0.6250     <- these respect it
 
-Neither means the trader has no wins and no open positions. Code that treats
-them as real zeros produces a plausible wrong answer. Branch on the request
-shape and render "not computed" instead. The `prediction-market-pnl` skill
-covers how to present this.
+total_fees      189412.87045        <- byte-identical in both
+biggest_win     1912203.738698
+max_drawdown    570536.077315
+```
+
+Fee totals, streaks and drawdown are **always all-time**, because truncated they
+mean nothing. So a windowed PnL minus an all-time fee total is a number that
+describes no period at all, and nothing in the response says the spans differ.
+
+If you subtract, name the span on each side — or use `window=all`, where they
+agree by construction.
 
 ## Errors
 
@@ -201,7 +206,7 @@ Practical consequences when writing a client:
 - [ ] empty-body SHA-256 constant used for GET
 - [ ] numeric strings parsed as decimals, not floats
 - [ ] micro-USDC divided by 1e6; shares divided by 1e6; prices ×100 for cents
-- [ ] windowed-leaderboard `win_rate` / `unrealized_pnl` rendered as
-      "not computed", not as zero
+- [ ] any subtraction names the span on both sides (a windowed PnL and an
+      all-time fee total do not belong in the same expression)
 - [ ] `429` backs off; `401` does not retry
 - [ ] leaderboard cached, and `traders/batch` used instead of looping per-wallet calls
