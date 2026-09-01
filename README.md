@@ -11,6 +11,7 @@ positions, trade history and tax reports across Polymarket and predict.fun.
 | skill | what it does |
 |---|---|
 | `bravado-data-api` | Write correct code against the Data API — HMAC signing, endpoints, units, pagination, rate limits, and the mistakes that cost time. Copy-ready signing helpers for TypeScript and Python. |
+| `bravado-warehouse-sql` | Write correct read-only SQL through `run_sql` — the readable views, the two money forms, the partition bounds that refuse a query before it runs, and the identifier trap. |
 | `prediction-market-pnl` | Read the numbers correctly. Prediction market accounting is not stock accounting, and several fields return a literal 0 when the value was simply not computed. |
 | `trader-due-diligence` | Decide whether a trader is actually good before following or copying them. Reading order, red flags, and the standard for an honest verdict. |
 | `market-analysis` | Read a market rather than a wallet: price path, volume, holder concentration, and whether the holders have real records. |
@@ -38,16 +39,18 @@ positions, trade history and tax reports across Polymarket and predict.fun.
 /plugin install bravado
 ```
 
-## Do you need an API key?
+## Connecting
 
-Not to start. The tax endpoints (`tax-report`, `tax-report/8949`,
-`event-graph`) are open and need no account, and the skills themselves work
-without any credential.
+```
+claude mcp add --transport http bravado https://mcp.bravadotrade.com/mcp
+```
 
-Deeper analytics — per-wallet PnL, positions, categories, leaderboards — are
-part of the Bravado Data API. Keys are minted self-serve at
-[bravadotrade.com](https://bravadotrade.com) after enabling the `analytics`
-product.
+Then `/mcp` to authenticate. The server registers your client itself, opens a
+browser once for consent, and holds the token. It is read-only — it cannot place,
+cancel or modify an order, and it cannot move funds.
+
+Access is tied to a Bravado partner account. The skills themselves need no
+credential and are useful without one.
 
 ## Verifying the signing helpers
 

@@ -4,9 +4,10 @@ description: Compare prediction market wallets on the same basis
 
 Compare these wallets: `$ARGUMENTS`.
 
-Screen all of them in one call first. Comparing is exactly what the screening
-view is for: it returns realized PnL, decided markets, win rate and the
-market-maker flag for every address at once, on one consistent basis.
+Screen all of them in one query first. Comparing is exactly what `run_sql`
+against `mcp_trader_score` is for: one `WHERE wallet IN (…)` returns realized
+PnL, decided markets and win rate for every address at once, on one consistent
+basis.
 
 Then dispatch a `trader-analyst` agent only for the addresses where the screen
 leaves a real question — concurrently, since they are independent. Running a
