@@ -96,32 +96,45 @@ with `get_trader_profile` for the few that survive the screen.
 reason the `prediction-market-pnl` skill gives — a rate without its denominator
 is the most misread number on this surface.
 
-## SQL is gross, the tools are net
+## Fees: one view names them, the other does not
 
-The single most likely way to conclude there is a bug when there is not.
+The most likely way to conclude there is a bug when there is not.
 
-Verified against the live surface, same wallet, same 30-day window:
+`mcp_trader_score` gives you the choice, explicitly:
 
 ```
-run_sql   sum(realized_pnl_mu) FROM mcp_wallet_daily   4,517,358.575118
-get_leaderboard / get_trader_profile  realized_pnl     4,327,945.704668
-                                            difference   189,412.870450
-profile total_fees                                       189,412.870450
+realized_pnl_net_mu      4327945704668   agrees with get_trader_profile
+realized_pnl_gross_mu    4517358575118   before fees
+total_fees_mu             189412870450   the difference, exactly
 ```
 
-Exactly the fees. **The warehouse figure is before fees; the curated tools report
-net.** Neither is wrong — they answer different questions, and they reconcile to
-the last decimal once you know which is which.
+Pick `_net_` when the number has to agree with a curated tool, `_gross_` when
+you want pre-fee. No arithmetic.
 
-So when a SQL result disagrees with a tool, subtract the fee total before
-concluding anything. And when you present a warehouse number to a user, say it is
-gross, because they will compare it against the app.
+**`mcp_wallet_daily` does not offer the choice.** Its columns are
+`realized_pnl_mu` and `realized_pnl_usd`, unqualified — and they are **gross**.
+Verified: summing thirty days for one wallet gives `4517358575118`, matching
+`realized_pnl_gross_mu` exactly and missing the tool's figure by the fee total.
 
-The same rule has a venue exception worth carrying: on predict.fun the engine's
-realized PnL is already fee-net, so there is nothing to subtract there and doing
-it anyway double-counts.
+Nothing in that column name says so. If you sum `mcp_wallet_daily` and compare
+it to a tool, it will look like the tool is wrong. It is not.
 
-## Cost is visible and it is charged
+On predict.fun there is nothing to reconcile — realized PnL is already fee-net
+by construction there, and subtracting the reported fees double-counts.
+
+## Columns worth knowing about
+
+`mcp_trader_score` carries more than PnL: `archetype` (e.g. `Scalper`),
+`is_bot`, `is_copyable`, `smart_score`, `pct_profitable_days`, streak lengths
+and `avg_hold_sec`.
+
+Treat the opinion columns — `is_copyable`, `smart_score`, `archetype` — as
+inputs, not verdicts. How they are derived is not documented on this surface, so
+a judgement that rests on them cannot be explained to the person receiving it.
+The reasoning in `trader-due-diligence` is built from figures you can show your
+work on; use these to sort, not to conclude.
+
+## Cost is visible and it is charged## Cost is visible and it is charged
 
 Queries are billed on what they scan, not only on being made. A query with its
 bound in place scans a partition; the same query without one is refused rather

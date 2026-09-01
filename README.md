@@ -72,6 +72,38 @@ Twelve cases under `evals/`. The ablation arm matters more than the absolute
 score: these test whether the skills change Claude's answer, and a case that
 scores the same with and without the plugin is a case the plugin is not earning.
 
+## What has been verified against the live surface
+
+The skills assert a lot of specific behaviour. This is what has actually been
+run, and what has not — so the next person maintaining this knows which claims
+carry evidence.
+
+**Verified against production**
+
+- every documented endpoint exists and is gated as described (32 checks)
+- `run_sql` refuses an unbounded read of a partitioned relation, before running
+- the warehouse reports gross where the curated tools report net, and they
+  reconcile to the fee total exactly
+- a window covers wins, losses and win rate, but never fees, streaks or drawdown
+- `mcp_markets.question_id` is not a condition id — filtering by one returns a
+  silent empty
+- prices are probabilities in `[0,1]`
+
+**Not verified**
+
+- everything about the predict.fun venue — `is_mm_bot` always false, `basis`
+  being a no-op, identity enrichment being Polymarket-only. That venue is not
+  enabled for the account this was tested from. These come from the service's
+  field-level documentation, which is generated from the handlers.
+- the PMWAS statement claims — pagination via `has_more_r1`, the reconciliation
+  gate. Those need a wallet in the batch roster.
+- the eval cases themselves. `claude plugin eval` is in early access and was not
+  enabled on the account these were written on.
+
+Two claims in earlier versions of these skills turned out to be false when
+finally run. Both came from prose documentation rather than a request. Prefer
+the field-level docs, and prefer a request to both.
+
 ## Privacy Policy
 
 This plugin ships documentation and skills only. It does not collect, store or
