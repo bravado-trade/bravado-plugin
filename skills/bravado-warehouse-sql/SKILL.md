@@ -58,10 +58,24 @@ LIMIT 20
 your own denylist on top removes wallets twice or, worse, removes the wrong ones
 because your list and theirs disagree.
 
-**`mcp_markets.market_id` is the Gamma id, not the condition id.** This is the
-same identifier trap the REST surface has, in a different place. A condition id
-(`0x` + 64 hex) will match nothing here and return an empty result rather than
-an error.
+**`mcp_markets` has no condition id, and has something that looks exactly like
+one.** `market_id` is the Gamma id — a short decimal like `3824007`. Alongside it
+sits `question_id`, a `0x` + 64-hex value with the same shape as a condition id
+and a different value. Verified on one market:
+
+```
+slug          sol-updown-5m-1787610300
+conditionId   0x7e0ed87e75841bbc682beb7b0012dcadc06efa43767659b573e02cbfa46707b9
+question_id   0x957984f50afe0e4a6d77d886db5162db8700c28a9007f4c1c40a5aebd7955041
+```
+
+Filtering `mcp_markets` by a condition id returns **zero rows and zero bytes
+read** — a silent empty, not an error. If a market lookup comes back empty and
+you are sure the market exists, check that you are not matching a condition id
+against `question_id`.
+
+Join on `slug`, or carry the Gamma `market_id`, which is what the other
+`mcp_*` relations use.
 
 ## Screening many wallets
 
