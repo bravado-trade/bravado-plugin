@@ -82,11 +82,41 @@ with `get_trader_profile` for the few that survive the screen.
 reason the `prediction-market-pnl` skill gives — a rate without its denominator
 is the most misread number on this surface.
 
+## SQL is gross, the tools are net
+
+The single most likely way to conclude there is a bug when there is not.
+
+Verified against the live surface, same wallet, same 30-day window:
+
+```
+run_sql   sum(realized_pnl_mu) FROM mcp_wallet_daily   4,517,358.575118
+get_leaderboard / get_trader_profile  realized_pnl     4,327,945.704668
+                                            difference   189,412.870450
+profile total_fees                                       189,412.870450
+```
+
+Exactly the fees. **The warehouse figure is before fees; the curated tools report
+net.** Neither is wrong — they answer different questions, and they reconcile to
+the last decimal once you know which is which.
+
+So when a SQL result disagrees with a tool, subtract the fee total before
+concluding anything. And when you present a warehouse number to a user, say it is
+gross, because they will compare it against the app.
+
+The same rule has a venue exception worth carrying: on predict.fun the engine's
+realized PnL is already fee-net, so there is nothing to subtract there and doing
+it anyway double-counts.
+
 ## Cost is visible and it is charged
 
 Queries are billed on what they scan, not only on being made. A query with its
 bound in place scans a partition; the same query without one is refused rather
 than being allowed to become expensive.
+
+Every response carries a `provenance` block with `clickhouse_read_bytes`,
+`elapsed_ms`, the relations touched and the operator denylist size. Read it —
+it is the honest cost of the query you just wrote, and it is how you find out
+that a predicate you thought was selective was not.
 
 Two habits that keep it cheap and are also just better SQL: select the columns
 you need rather than `*`, and put the most selective predicate first.

@@ -12,37 +12,48 @@ confidently wrong answer rather than an error.
 
 Learn the zero traps first. Everything else is ordinary care.
 
-## The zero traps
+## Windows are partial, and not every field respects them
 
-### Windowed leaderboard rows have no win/loss data
+This is the trap, and it is the opposite of what an earlier version of this skill
+claimed. Windowed requests **do** return real win/loss data — verified against the
+live surface:
 
-`wins`, `losses`, `total_positions` come from all-time rollups. On any
-**windowed** leaderboard request (`window=24h`, `30d`, …) they are **`0`**, and
-`win_rate` is derived as `wins/(wins+losses)`, so it reads `0` too.
+```
+window=7d    wins 6   losses 6   positions 12   win_rate 0.5000
+window=30d   wins 10  losses 6   positions 16   win_rate 0.6250
+```
 
-A 30d leaderboard row showing `win_rate: 0` and `total_positions: 0` alongside
-a large positive PnL is not a trader who lost every market. It is a field that
-only exists for `window=all`.
+But in the same two responses these were **byte-identical**:
 
-**Rule:** never quote win rate from a windowed leaderboard. Use `window=all`,
-or pull `traders/{address}` for that wallet.
+```
+total_fees      189412.87045
+biggest_win     1912203.738698
+max_drawdown    570536.077315
+```
 
-### `unrealized_pnl` on the leaderboard is `0` unless live stats are on
+**Fee totals, streak metadata and drawdown are always all-time, whatever window
+you asked for.** They are meaningless truncated, so the surface does not truncate
+them.
 
-`unrealized_pnl`, `active_positions` and `open_position_value` on leaderboard
-rows are `0` unless the request enables live stats (and the server has that
-feature on). They are not "this trader has no open positions".
+The hazard is arithmetic across the two. A 30-day realized PnL minus an all-time
+fee total is not a 30-day net figure, and nothing in the response says the two
+numbers cover different spans. If you subtract, say which span each side came
+from — or use `window=all`, where they agree by construction.
 
-`traders/{address}` computes them properly from the FIFO lot state joined to
-current marks.
+## Unknown is reported as unknown
 
-### Missing marks
+A value the source cannot determine is reported as explicitly unknown. It is not
+silently zeroed. So a `0` on this surface is a real zero, and the right reading of
+a missing field is "not determined" rather than "none".
 
-Unrealized value needs a current mark (`argMax(price_mid, ts)`). Where a mark
-is absent the contribution is treated as zero. An illiquid position that has
-not traded recently therefore quietly contributes nothing to unrealized.
+Two places where a zero is still worth a second look:
 
-**In all three cases: say "not computed", never "zero".**
+- `unrealized_pnl: "0"` with `active_positions: 0` is a wallet that is genuinely
+  flat, and it is common — most large realized records belong to wallets that
+  have closed out.
+- `active_positions: 0` alongside a non-zero `open_position_value` is dust:
+  positions under one whole share are excluded from the count but not from the
+  value.
 
 ## What PnL actually is
 
