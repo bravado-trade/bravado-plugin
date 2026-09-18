@@ -106,28 +106,22 @@ the field-level docs, and prefer a request to both.
 
 ## Privacy Policy
 
-This plugin ships documentation and skills only. It does not collect, store or
-transmit any data.
+See the [Bravado Privacy Policy](https://www.bravadotrade.com/privacy) for
+information collected across Bravado services, its uses, service providers,
+retention and your controls.
 
-**What it collects:** nothing. There is no telemetry, no analytics, and the
-plugin itself makes no network request.
+The plugin connects to Bravado's remote, read-only MCP server. When you connect
+an account and use a tool, the client sends authorization and tool inputs to
+Bravado and receives the requested results. Bravado processes account,
+authorization, usage and operational records; this is not an offline-only
+integration. Tool inputs can include public wallet addresses, market filters
+and SQL queries. Do not include secrets or unrelated personal information.
 
-**Credentials:** if you supply Bravado API credentials to reach the Data API,
-they are held by your Claude client and used only to sign requests to
-`partner-api.bravadotrade.com`. This repository contains no credential storage,
-and no credential is written to disk by the plugin.
+You can revoke MCP access through the Bravado Console and disconnect the
+integration in your AI client. These actions do not automatically delete
+billing, security records or results already held by your AI provider.
 
-**Third-party requests:** when a skill leads Claude to call the Bravado Data
-API, that request goes to `partner-api.bravadotrade.com`. Bravado logs those
-requests for rate limiting, usage metering and abuse prevention, associated
-with the API key that made them. Wallet addresses you query are public
-blockchain data. The open tax endpoints require no credential and are not
-associated with an account.
-
-**Retention and sharing:** the plugin retains nothing and shares nothing with
-anyone.
-
-**Contact:** support@bravadotrade.com
+For privacy requests, contact support@bravadotrade.com.
 
 ## License## License
 
